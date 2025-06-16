@@ -1,1 +1,127 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <title>Resolución de Desigualdades</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f0f4f8;
+      padding: 20px;
+    }
+    h1 {
+      color: #333;
+    }
+    input, select, button {
+      padding: 8px;
+      margin: 5px 0;
+      width: 100%;
+    }
+    .output {
+      margin-top: 15px;
+      padding: 10px;
+      background-color: #e8f5e9;
+      border-left: 5px solid #4caf50;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Solucionador de Desigualdades</h1>
+
+  <label for="tipo">Tipo de desigualdad:</label>
+  <select id="tipo">
+    <option value="lineal">Lineal (ax + b < 0)</option>
+    <option value="cuadratica">Cuadrática (ax² + bx + c < 0)</option>
+  </select>
+
+  <label>Coeficiente a:</label>
+  <input type="number" id="a" step="any">
+
+  <label>Coeficiente b:</label>
+  <input type="number" id="b" step="any">
+
+  <label id="c-label">Coeficiente c (solo si es cuadrática):</label>
+  <input type="number" id="c" step="any">
+
+  <label>Desigualdad:</label>
+  <select id="desigualdad">
+    <option value="<">&lt;</option>
+    <option value="<=">&le;</option>
+    <option value=">">&gt;</option>
+    <option value=">=">&ge;</option>
+  </select>
+
+  <button onclick="resolver()">Resolver</button>
+
+  <div id="resultado" class="output"></div>
+
+  <script>
+    function resolver() {
+      const tipo = document.getElementById('tipo').value;
+      const a = parseFloat(document.getElementById('a').value);
+      const b = parseFloat(document.getElementById('b').value);
+      const c = parseFloat(document.getElementById('c').value);
+      const desigualdad = document.getElementById('desigualdad').value;
+      let resultado = '';
+
+      if (tipo === 'lineal') {
+        if (a === 0) {
+          resultado = b + ' ' + desigualdad + ' 0 ⇒ ';
+          resultado += eval(b + desigualdad + '0') ? 'Verdadero para todo x' : 'Falso, no hay solución';
+        } else {
+          const x = -b / a;
+          const signo = a > 0 ? desigualdad : invertirDesigualdad(desigualdad);
+          resultado = `Paso 1: ${a}x + ${b} ${desigualdad} 0 <br>`;
+          resultado += `Paso 2: x ${signo} ${x.toFixed(2)} <br>`;
+          resultado += `<strong>Solución:</strong> x ${signo} ${x.toFixed(2)}`;
+        }
+      }
+
+      if (tipo === 'cuadratica') {
+        const D = b * b - 4 * a * c;
+        resultado += `Paso 1: Discriminante D = ${b}² - 4(${a})(${c}) = ${D} <br>`;
+        if (D < 0) {
+          resultado += "No hay soluciones reales ⇒ ";
+          resultado += (desigualdad === '<' || desigualdad === '>') ? "Solución: Conjunto vacío" : "Depende del signo de a";
+        } else {
+          const x1 = (-b - Math.sqrt(D)) / (2 * a);
+          const x2 = (-b + Math.sqrt(D)) / (2 * a);
+          const menor = Math.min(x1, x2).toFixed(2);
+          const mayor = Math.max(x1, x2).toFixed(2);
+          resultado += `Paso 2: Raíces: x₁ = ${x1.toFixed(2)}, x₂ = ${x2.toFixed(2)} <br>`;
+          if (a > 0) {
+            if (desigualdad === '<') resultado += `Solución: (${menor}, ${mayor})`;
+            if (desigualdad === '<=') resultado += `Solución: [${menor}, ${mayor}]`;
+            if (desigualdad === '>') resultado += `Solución: x < ${menor} o x > ${mayor}`;
+            if (desigualdad === '>=') resultado += `Solución: x ≤ ${menor} o x ≥ ${mayor}`;
+          } else {
+            if (desigualdad === '<') resultado += `Solución: x < ${menor} o x > ${mayor}`;
+            if (desigualdad === '<=') resultado += `Solución: x ≤ ${menor} o x ≥ ${mayor}`;
+            if (desigualdad === '>') resultado += `Solución: (${menor}, ${mayor})`;
+            if (desigualdad === '>=') resultado += `Solución: [${menor}, ${mayor}]`;
+          }
+        }
+      }
+
+      document.getElementById('resultado').innerHTML = resultado;
+    }
+
+    function invertirDesigualdad(signo) {
+      if (signo === '<') return '>';
+      if (signo === '<=') return '>=';
+      if (signo === '>') return '<';
+      if (signo === '>=') return '<=';
+    }
+
+    // Mostrar/ocultar el campo c
+    document.getElementById('tipo').addEventListener('change', () => {
+      const isCuadratica = document.getElementById('tipo').value === 'cuadratica';
+      document.getElementById('c').style.display = isCuadratica ? 'inline' : 'none';
+      document.getElementById('c-label').style.display = isCuadratica ? 'inline' : 'none';
+    });
+  </script>
+
+</body>
+</html>
 
