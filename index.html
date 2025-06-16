@@ -3,25 +3,44 @@
 <head>
   <meta charset="UTF-8">
   <title>Resolución de Desigualdades</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f0f4f8;
+      font-family: 'Segoe UI', sans-serif;
+      background: #f4f7fa;
       padding: 20px;
+      max-width: 800px;
+      margin: auto;
     }
     h1 {
+      text-align: center;
       color: #333;
     }
-    input, select, button {
-      padding: 8px;
-      margin: 5px 0;
+    label, input, select, button {
+      display: block;
       width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      font-size: 16px;
+    }
+    button {
+      background: #007acc;
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #005f99;
     }
     .output {
-      margin-top: 15px;
-      padding: 10px;
-      background-color: #e8f5e9;
-      border-left: 5px solid #4caf50;
+      margin-top: 20px;
+      background: #e0f7fa;
+      border-left: 5px solid #00796b;
+      padding: 15px;
+      font-size: 16px;
+    }
+    canvas {
+      margin-top: 30px;
     }
   </style>
 </head>
@@ -29,99 +48,153 @@
 
   <h1>Solucionador de Desigualdades</h1>
 
-  <label for="tipo">Tipo de desigualdad:</label>
+  <label>Tipo de desigualdad:</label>
   <select id="tipo">
-    <option value="lineal">Lineal (ax + b < 0)</option>
-    <option value="cuadratica">Cuadrática (ax² + bx + c < 0)</option>
+    <option value="lineal">Lineal (ax + b)</option>
+    <option value="cuadratica">Cuadrática (ax² + bx + c)</option>
   </select>
 
   <label>Coeficiente a:</label>
-  <input type="number" id="a" step="any">
+  <input type="number" id="a" step="any" placeholder="Ej: 2">
 
   <label>Coeficiente b:</label>
-  <input type="number" id="b" step="any">
+  <input type="number" id="b" step="any" placeholder="Ej: -4">
 
-  <label id="c-label">Coeficiente c (solo si es cuadrática):</label>
-  <input type="number" id="c" step="any">
+  <label id="c-label">Coeficiente c (si es cuadrática):</label>
+  <input type="number" id="c" step="any" placeholder="Ej: -6">
 
   <label>Desigualdad:</label>
   <select id="desigualdad">
-    <option value="<">&lt;</option>
-    <option value="<=">&le;</option>
-    <option value=">">&gt;</option>
-    <option value=">=">&ge;</option>
+    <option value="<">f(x) &lt; 0</option>
+    <option value="<=">f(x) &le; 0</option>
+    <option value=">">f(x) &gt; 0</option>
+    <option value=">=">f(x) &ge; 0</option>
   </select>
 
-  <button onclick="resolver()">Resolver</button>
+  <button onclick="resolver()">Resolver y Graficar</button>
 
   <div id="resultado" class="output"></div>
 
+  <canvas id="grafico" width="700" height="400"></canvas>
+
   <script>
+    let chart;
+
     function resolver() {
       const tipo = document.getElementById('tipo').value;
       const a = parseFloat(document.getElementById('a').value);
       const b = parseFloat(document.getElementById('b').value);
-      const c = parseFloat(document.getElementById('c').value);
+      const c = parseFloat(document.getElementById('c').value) || 0;
       const desigualdad = document.getElementById('desigualdad').value;
-      let resultado = '';
+      const resultadoDiv = document.getElementById('resultado');
 
-      if (tipo === 'lineal') {
-        if (a === 0) {
-          resultado = b + ' ' + desigualdad + ' 0 ⇒ ';
-          resultado += eval(b + desigualdad + '0') ? 'Verdadero para todo x' : 'Falso, no hay solución';
-        } else {
-          const x = -b / a;
-          const signo = a > 0 ? desigualdad : invertirDesigualdad(desigualdad);
-          resultado = `Paso 1: ${a}x + ${b} ${desigualdad} 0 <br>`;
-          resultado += `Paso 2: x ${signo} ${x.toFixed(2)} <br>`;
-          resultado += `<strong>Solución:</strong> x ${signo} ${x.toFixed(2)}`;
-        }
+      let xValues = [], yValues = [], cumple = [];
+
+      for (let x = -20; x <= 20; x += 0.1) {
+        let fx = tipo === 'lineal' ? a * x + b : a * x * x + b * x + c;
+        xValues.push(x.toFixed(2));
+        yValues.push(fx);
+        cumple.push(eval(`fx ${desigualdad} 0`) ? fx : null);
       }
 
-      if (tipo === 'cuadratica') {
+      let solucionTexto = "";
+
+      if (tipo === "lineal") {
+        const xSol = -b / a;
+        const signo = a > 0 ? desigualdad : invertir(desigualdad);
+        solucionTexto += `Desigualdad lineal: ${a}x + ${b} ${desigualdad} 0<br>`;
+        solucionTexto += `Se cumple en: <strong>x ${signo} ${xSol.toFixed(2)}</strong>`;
+      } else {
         const D = b * b - 4 * a * c;
-        resultado += `Paso 1: Discriminante D = ${b}² - 4(${a})(${c}) = ${D} <br>`;
+        solucionTexto += `Desigualdad cuadrática: ${a}x² + ${b}x + ${c} ${desigualdad} 0<br>`;
         if (D < 0) {
-          resultado += "No hay soluciones reales ⇒ ";
-          resultado += (desigualdad === '<' || desigualdad === '>') ? "Solución: Conjunto vacío" : "Depende del signo de a";
+          solucionTexto += `No hay raíces reales. `;
+          solucionTexto += (a > 0 && (desigualdad === "<" || desigualdad === "<=")) ||
+                           (a < 0 && (desigualdad === ">" || desigualdad === ">=")) ?
+            "La desigualdad se cumple para todo x." :
+            "La desigualdad no se cumple para ningún x.";
         } else {
           const x1 = (-b - Math.sqrt(D)) / (2 * a);
           const x2 = (-b + Math.sqrt(D)) / (2 * a);
           const menor = Math.min(x1, x2).toFixed(2);
           const mayor = Math.max(x1, x2).toFixed(2);
-          resultado += `Paso 2: Raíces: x₁ = ${x1.toFixed(2)}, x₂ = ${x2.toFixed(2)} <br>`;
+
           if (a > 0) {
-            if (desigualdad === '<') resultado += `Solución: (${menor}, ${mayor})`;
-            if (desigualdad === '<=') resultado += `Solución: [${menor}, ${mayor}]`;
-            if (desigualdad === '>') resultado += `Solución: x < ${menor} o x > ${mayor}`;
-            if (desigualdad === '>=') resultado += `Solución: x ≤ ${menor} o x ≥ ${mayor}`;
+            if (desigualdad === "<") solucionTexto += `Se cumple: x ∈ (${menor}, ${mayor})`;
+            if (desigualdad === "<=") solucionTexto += `Se cumple: x ∈ [${menor}, ${mayor}]`;
+            if (desigualdad === ">") solucionTexto += `Se cumple: x < ${menor} o x > ${mayor}`;
+            if (desigualdad === ">=") solucionTexto += `Se cumple: x ≤ ${menor} o x ≥ ${mayor}`;
           } else {
-            if (desigualdad === '<') resultado += `Solución: x < ${menor} o x > ${mayor}`;
-            if (desigualdad === '<=') resultado += `Solución: x ≤ ${menor} o x ≥ ${mayor}`;
-            if (desigualdad === '>') resultado += `Solución: (${menor}, ${mayor})`;
-            if (desigualdad === '>=') resultado += `Solución: [${menor}, ${mayor}]`;
+            if (desigualdad === "<") solucionTexto += `Se cumple: x < ${menor} o x > ${mayor}`;
+            if (desigualdad === "<=") solucionTexto += `Se cumple: x ≤ ${menor} o x ≥ ${mayor}`;
+            if (desigualdad === ">") solucionTexto += `Se cumple: x ∈ (${menor}, ${mayor})`;
+            if (desigualdad === ">=") solucionTexto += `Se cumple: x ∈ [${menor}, ${mayor}]`;
           }
         }
       }
 
-      document.getElementById('resultado').innerHTML = resultado;
+      resultadoDiv.innerHTML = solucionTexto;
+
+      if (chart) chart.destroy();
+      const ctx = document.getElementById('grafico').getContext('2d');
+
+      chart = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels: xValues,
+          datasets: [
+            {
+              label: 'f(x)',
+              data: yValues,
+              borderColor: '#1976d2',
+              borderWidth: 2,
+              fill: false
+            },
+            {
+              label: 'Zona que cumple desigualdad',
+              data: cumple,
+              borderColor: '#e64a19',
+              borderDash: [5, 5],
+              borderWidth: 2,
+              fill: false,
+              pointRadius: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { display: true }
+          },
+          scales: {
+            x: {
+              title: { display: true, text: 'x' },
+              ticks: { maxTicksLimit: 15 }
+            },
+            y: {
+              title: { display: true, text: 'f(x)' },
+              min: -50, max: 50
+            }
+          }
+        }
+      });
     }
 
-    function invertirDesigualdad(signo) {
-      if (signo === '<') return '>';
-      if (signo === '<=') return '>=';
-      if (signo === '>') return '<';
-      if (signo === '>=') return '<=';
+    function invertir(signo) {
+      return signo === '<' ? '>' :
+             signo === '<=' ? '>=' :
+             signo === '>' ? '<' : '<=';
     }
 
-    // Mostrar/ocultar el campo c
+    // Mostrar u ocultar c según tipo
     document.getElementById('tipo').addEventListener('change', () => {
-      const isCuadratica = document.getElementById('tipo').value === 'cuadratica';
-      document.getElementById('c').style.display = isCuadratica ? 'inline' : 'none';
-      document.getElementById('c-label').style.display = isCuadratica ? 'inline' : 'none';
+      const mostrar = document.getElementById('tipo').value === 'cuadratica';
+      document.getElementById('c').style.display = mostrar ? 'block' : 'none';
+      document.getElementById('c-label').style.display = mostrar ? 'block' : 'none';
     });
   </script>
 
 </body>
 </html>
+
 
